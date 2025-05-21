@@ -1,18 +1,16 @@
 import random
 
 def roll_d20():
-    result = random.randint(1, 20)
-    print(f"Rolled a {result}")
-    return result
+    return random.randint(1, 20)
 
-def interpret_roll(roll):
-    if roll == 1:
+def interpret_roll(value):
+    if value == 1:
         return "Fumble!"
-    elif 2 <= roll <= 7:
+    elif value <= 8:
         return "Failure"
-    elif 8 <= roll <= 14:
+    elif value <= 16:
         return "Success"
-    elif 15 <= roll <= 19:
+    elif value <= 19:
         return "Critical"
-    elif roll == 20:
+    else:
         return "Super Critical!"
