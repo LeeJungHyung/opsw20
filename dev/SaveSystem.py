@@ -1,3 +1,5 @@
+import os
+from os.path import exists
 from tinydb import TinyDB, Query
 from item import Weapon, Passive, Active
 
@@ -5,7 +7,11 @@ class SaveSystem:
     def __init__(self, slot_number):
         if slot_number not in [1, 2, 3]:
             raise ValueError("You Can Only Choose Save File 1, 2, 3.")
-        self.db = TinyDB(f'save_slot_{slot_number}.jason')
+
+        SAVE_DIR = os.path.expanduser("../save_files/")
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        file_path = os.path.join(SAVE_DIR, f"save_slot_{slot_number}.json")
+        self.db = TinyDB(file_path)
         self.slot_number = slot_number
 
     def save_player(self, player):
@@ -59,7 +65,7 @@ class SaveSystem:
             'rarity': item.rarity,
             'effect': item.effect,
             'damage': getattr(item, 'damage', None),
-            'max_uses': getattr(item,'max_uses' None),
+            'max_uses': getattr(item,'max_uses', None),
             'remaining_uses': getattr(item, 'remaining_uses', None)
         }
 
@@ -76,10 +82,10 @@ class SaveSystem:
         if cls_name == 'Weapon':
             return Weapon(name, desc, data['damage'], effect, rarity)
         elif cls_name == 'Passive':
-            return Passive(name, desc, rarity, effect)
+            return Passive(name, desc, data.get('deffend', 0), rarity, effect)
         elif cls_name == 'Active':
-            item = Active(name, desc, data['max_uses'], rarity, effect)
-            item.remaining_uses = data['remaining_uses']
+            item = Active(name, desc, effect, data['max_uses'], rarity)
+            item.remaining = data['remaining_uses']
             return item
         else:
             print(f"Unknown Item Class: {cls_name}")

@@ -10,6 +10,15 @@ class Item:
     def use(self, player):
         print(f"You Used {self.name}!")
 
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'name': self.name,
+            'description': self.description,
+            'rarity': self.rarity,
+            'effct': self.effect
+        }
+
     def __str__(self):
         effct = f", Effect : {self.effect}" if self.effect else ""      # Ternary Operators
         return f"{self.name} (({self.rarity}) - {self.description}{effct})"
@@ -53,3 +62,13 @@ class Active(Item):
 
     def activate_effect(self, player, result):
         pass        # overrid later
+
+    def to_dict(self):
+        base = super().to_dict()
+        base.update(
+            {
+                'max_uses': self.max_uses,
+                'remaining_uses': self.remaining
+            }
+        )
+        return base
