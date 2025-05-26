@@ -119,7 +119,7 @@ class Player:
             'boss_count': getattr(self, 'boss_count', 0),
             'weapon': self.weapon_slot.to_dict() if self.weapon_slot else None,
             'passive': self.passive_slot.to_dict() if self.passive_slot else None,
-            'actives': [item.to_dict if item else None for item in self.active_slot]
+            'actives': [item.to_dict() if item else None for item in self.active_slot]
         }
     
     @classmethod
@@ -135,7 +135,7 @@ class Player:
             player.passive_slot = Passive(**data['passive'])
 
         player.active_slot = []
-        for item_data in data['active_items']:
+        for item_data in data['actives']:
             if item_data:
                 item = Active(**item_data)
                 player.active_slot.append(item)

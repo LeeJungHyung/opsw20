@@ -1,6 +1,6 @@
 import os
 from os.path import exists
-from tinydb import TinyDB, Query
+from tinydb import Query, TinyDB
 from item import Weapon, Passive, Active
 
 class SaveSystem:
