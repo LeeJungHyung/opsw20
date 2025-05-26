@@ -11,6 +11,7 @@ class Player:
 
         self.weapon_slot = None
         self.passive_slot = None
+<<<<<<< HEAD
         self.active_slot = [None, None, None]
 
     def is_alive(self):
@@ -50,6 +51,25 @@ class Player:
                 print(f"  [{i+1}] {item.name} ({item.remaining_uses}/{item.max_uses})")
             else:
                 print(f"  [{i+1}] - NONE")
+=======
+        self.active_slot = None
+
+    def equip_item(self, item):
+        if isinstance(item, Weapon):
+            if self.weapon_slot:
+                print(f"Switch Weapon to {item.name}.")
+            self.weapon_slot = item
+
+        elif isinstance(item, Passive):
+            if self.passive_slot:
+                print(f"Switch Passive Item to {item.name}")
+            self.passive_slot = item
+
+        elif isinstance(item, Active):
+            if self.active_slot:
+                print(f"Switch Active Item to {item.name}")
+            self.active_slot = item
+>>>>>>> tmp
 
     def get_total_attack(self):
         bonus = self.weapon_slot.damage if self.weapon_slot else 0
@@ -79,15 +99,24 @@ class Player:
             damage = total_attack
         elif result == "Critical":
             damage = (total_attack * 1.2)
+<<<<<<< HEAD
         elif result == "Super Critical!":
             damage = (total_attack * 1.5)
 
         target.take_damage(damage)
         print(f"You Damaged {damage} to {target.name}!")
+=======
+        elif result == "Super Critical!"
+            damage = (total_attack * 1.5)
+
+        target.take_damage(damage)
+            print(f"You Damaged {damage} to {target.name}!")
+>>>>>>> tmp
 
         if self.weapon_slot and self.weapon_slot.effect:
             self.apply_effect(self.weapon_slot.effect, target)
 
+<<<<<<< HEAD
     def use_item(self, name):
         for i, item in enumerate(self.active_slot):
             if item and item.name.lower() == name.lower():
@@ -97,6 +126,17 @@ class Player:
                 return True
         print(f"{name} Does NOT Exist or Cannot Use")
         return False
+=======
+    def use_active_item(self):
+        if self.active_slot:
+            consumed = self.active_slot.use(self)
+            if consumed:
+                print(f"You Used {self.active_slot.name}")
+                self.active_slot = None
+
+        else:
+            print("You Don't Have Items.")
+>>>>>>> tmp
 
     def take_damage(self, amount):
         damage = max(0, amount - self.get_total_defense())
@@ -111,6 +151,7 @@ class Player:
         # On Develop
         if not effect:
             return
+<<<<<<< HEAD
 
     def to_dict(self):
         return {
@@ -143,3 +184,5 @@ class Player:
                 player.active_slot.append(None)
 
         return player
+=======
+>>>>>>> tmp
