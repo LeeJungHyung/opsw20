@@ -1,150 +1,161 @@
-<<<<<<< HEAD
-from random import choice
-from dice import *
-from player import *
-from mobs import *
-
-
-# Add to Mob pool after creating new mobs
-normal_mobs = [Junior_Time_Warden]
-elite_mobs = [Senior_Time_Warden]
-boss_mobs = [Devourer_of_Time]
-
-class Combat:
-    def __init__(self, player, difficulty_multiplier = 1.0, boss_count = 0):
-        self.player = player
-        self.difficulty_multiplier = difficulty_multiplier
-        self.batle_count = 0
-        self.elite_count = 0
-        self.boss_count = boss_count
-
-    def scale_mob_stats(self, mob):
-        mob.hp = int(mob.hp * self.difficulty_multiplier)
-        mob.attack = int(mob.attack * self.difficulty_multiplier)
-        mob.defense = int(mob.defense * self.difficulty_multiplier)
-        return mob
-
-    def generate_enemies(self):
-        if self.elite_count >= 4:
-            print("\n========= Warning! Boss Approaching! =========")
-            self.elite_count = 0
-            self.boss_count += 1
-            return [self.scale_mob_stats(mob()) for mob in boss_mobs]
-        elif 5 >= self.batle_count >= 3:
-            self.elite_count += 1
-            self.batle_count = 0
-            elites = random.sample(elite_mobs, k = random.randint(1, 2))
-            return [self.scale_mob_stats(mob()) for mob in elite_mobs]
-        else:
-            self.batle_count += 1
-            normals = random.sample(normal_mobs, k = random.randint (2, 4))
-            return [self.scale_mob_stats(mob()) for mob in normals]
-
-    def filter_drops_by_rarity(self, enemy, drops):
-        result = []
-        name = enemy.name.lower()
-
-        for item in drops:
-            rarity = item.rarity.lower()
-
-            if "devourer" in name:
-                if rarity == "legendary":
-                    result.append(item)
-            elif "senior" in name:
-                if rarity in ("rare", "common"):
-                    result.append(item)
-                elif rarity == "legendary" and random.random() < 0.01:
-                    result.append(item)
-            else:
-                if rarity == "common":
-                    result.append(item)
-                elif rarity == "rare" and random.random() < 0.05:
-                    result.append(item)
-
-        return result
-
-    def start_battle(self):
-        enemies = self.generate_enemies()
-        print("========= Enemy Encountered! =========")
-
-        while self.player.is_alive() and any(e.is_alive() for e in enemies):
-            print(f"\nYour HP : {self.player.hp}")
-            for i, enemy in enumerate(enemies):
-                if enemy.is_alive():
-                    print(f"[{i}] {enemy.name} - HP : {enemy.hp}")
-
-            actions = 3
-            while actions > 0:
-                command = input(f"\nYou have {actions} actions remaining >> ").strip().lower()
-
-                if command.startswith("attack"):
-                    parts = command.split()
-                    if len(parts) != 2 or not parts[1].isdigit():
-                        print("HOW TO? : attack <index> (ex : attack 2)")
-                        continue
-                    idx = int(parts[1])
-                    if 0 <= idx < len(enemies) and enemies[idx].is_alive():
-                        self.player.attack(enemies[idx])
-                        actions -= 1
-                    else:
-                        print("! There is no target like that!")
-
-                elif command == "inventory":
-                    self.player.show_inventory()
-
-                elif command.startswith("use "):
-                    item_name = command[4:]. strip()
-                    used = self.player.use_item(item_name)
-                    if used:
-                        actions -= 1
-
-                else:
-                    print("! Unkown Command !")
-
-                for enemy in enemies:
-                    if not enemy.is_alive() and not hasattr(enemy, "_dead_announced"):
-                        print(f"{enemy.name} ELIMINATED!")
-                        enemy._dead_announced = True
-
-            print("\n========= Enemies' Turn! =========")
-            for enemy in enemies:
-                if enemy.is_alive():
-                    enemy.attack_target(self.player)
-                    if not self.player.is_alive():
-                        print("========= YOU DIED =========")
-                        return
-        
-        if self.player.is_alive():
-            print("\nYou Survived Another Day")
-            print("\nThey Left Something...")
-            for enemy in enemies:
-                raw_drops = get_drops(enemy)
-                filtered = self.filter_drops_by_rarity(enemy, raw_drops)
-                for item in filtered:
-                    print(f"{item.name} ({item.rarity})")
-                    self.player.equip_item(item)
-
-        else:
-            print("\n========= YOU DIED =========\n")
-            return self.player.is_alive()
-
-
-
-
-
-=======
+from enum import EnumMeta
 import random
-from dice import *
+from typing import List
+from player import *
 from mob import *
-from item import *
+from mobs import *
+from SaveSystem import SaveSystem
 
-class Combat:
-    def __init__(self, player, stage = 1):
-        self.player player
-        self.stage = stage
-        self.battle_count = 0
-        self.elite_battles = 0
+class CombatManager:
+    def __init__(self, player: Player, save_system: SaveSystem, player_log: dict):
+        self.player = player
+        self.save_system = save_system
+        self.player_log = player_log
+        self.story_shown = False
+        self.current_loop = 1
+    
+    def start_game(self):
 
-    def start_battle(self):
-        print(f"\n")
->>>>>>> tmp
+        while True:
+            print(f"\n ========= Starting Loop {self.current_loop} =========\n")
+            for stage in (1, 2, 3):
+                if not self.start_stage(stage):
+                    return False
+            self.current_loop += 1
+
+    def start_stage(self, stage_number: int) -> bool:
+        if stage_number == 1:
+            return self.stage_one()
+        elif stage_number == 2:
+            return self.stage_two()
+        elif stage_number == 3:
+            return self.stage_three()
+        else:
+            raise ValueError(f"Invalid stage: {stage_number}")
+
+    def stage_one(self) -> bool:
+        print("--------- Stage 1 (Loop {self.current_loop}) ---------")
+        for battle_index in range(5):
+            enemies: List[Mob] = get_stage_enemies(self.current_loop, 1, battle_index)
+            print(f"\n[Stage 1] Enemies : {[m.name for m in enemies]}")
+            survived = self.battle_loop(enemies)
+            if not survived:
+                return False
+            self.post_battle_gap()
+
+        return True
+
+    def stage_two(self) -> bool:
+        print(f"--------- Stage 2 (Loop {self.current_loop}) ---------")
+        for battle_index in range(4):
+            enemies: List[Mob] = get_stage_enemies(self.current_loop, 2, battle_index)
+            print(f"\n[Stage 2] Enemies : {[m.name for m in enemies]}")
+            survived = self.battle_loop(enemies)
+            if not survived:
+                return False
+            self.post_battle_gap()
+
+        return True
+
+    def stage_three(self) -> bool:
+        print(f"--------- Stage 3 (Loop {self.current_loop}) ---------")
+        enemies: List[Mob] = get_stage_enemies(self.current_loop, 3, 0)
+        print(f"\n[Stage 3] Boss : {[m.name for m in enemies]}")
+        survived = self.battle_loop(enemies)
+        if not survived:
+            return False
+
+        if self.current_loop == 1 and not self.story_shown:
+            print("\n YOU DEFEATED THE DEVOURER OF TIME")
+            # STROYLINE WILL BE ADDED
+            self.story_shown = True
+
+        return True
+
+    def battle_loop(self, enemies: List[Mob]) -> bool:
+        self.player.reset_action()
+        for mob in enemies:
+            mob.reset_turn_state()
+
+        print("\n========= BATTLE START =========")
+        print(f"Player: {self.player.name} (HP: {self.player.hp}) VS Enemies: {[m.name for m in enemies]}")
+        print("================================\n")
+
+        while self.player.is_alive() and any(m.is_alive() for m in enemies):
+            self.player.apply_statuses()
+            for mob in enemies:
+                mob.apply_statuses()
+
+            self.player.reset_action()
+            while self.player.turn_action > 0 and self.player.is_alive():
+                self.player.take_turn(enemies)
+                if no any(m.is_alive() for m in enemies):
+                    break
+
+            if not any(m.is_alive() for m in enemies):
+                break
+
+            for mob in enemies:
+                if not mob.is_alive():
+                    continue
+
+                mob.apply_statuses()
+
+                if mob.is_stunned():
+                    mob.reset_turn_state()
+                    continue
+
+                used_skill = False
+                if mob.skill and hasattr(mob, 'skill_chance'):
+                    if random.random() <= mob.skill_chance:
+                        damage, status_effect = mob.used_skill(self.player)
+                        used_skill = True
+
+                if not used_skill:
+                    roll, category, damage = mob.attack(self.player)
+                
+                mob.reset_turn_state()
+
+                if not self.player.is_alive():
+                    break
+
+            if not self.player.is_alive():
+                break
+
+        if self.player.is_alive():
+            print("\n>>> YOU SURVIVED <<<")
+            total_drops = []
+            for mob in enemies:
+                if not mob.is_alive():
+                    total_drops.extend(get_drops(mob, max_drops=1))
+
+            if total_drops:
+                print(f"\nLoot dropped: {[item.name for item in total_drops]}")
+                for item in total_drops:
+                    print(f"Acquired: {item.name}")
+                    self.player_log['item_acquired'] += 1
+                    if isinstance(item, type(self.player.weapon)):
+                        self.player.weapon = item
+                    elif isinstance(item, type(self.player.passive)):
+                        self.player.passive = item
+                    else:
+                        if len(self.player.active_items) < self.player.active_slots:
+                            self.player.active_items.append(item)
+                        else:
+                            print(f"No Active slot free, {item.name} discarded.")
+
+            self.player_log['battle_logs'].append(f"Battle wit {[m.name for m in enemies]} won.")
+            self.save_system.save_player(self.player, self.player_log)
+            return True
+        else:
+            print("\n>>> YOU DIED <<<")
+            self.player_log['battle_logs'].append("Player died. Game OVER.")
+            self.save_system.save_player(self.player, self.player_log)
+            return False
+
+    def post_battle_gap(self):
+        print("\n --- Battle gap: check inventory and save ---")
+        self.save_system.save_player(self.player, self.player_log)
+        print("Progress saved. Preparing next battle...\n")
+
+

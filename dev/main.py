@@ -1,79 +1,62 @@
-from cmd2 import *
+from sys import exception
+import cmd2
 from player import *
 from SaveSystem import *
 from combat import *
+from item_registry import *
 
-class GameShell(Cmd):
-    prompt = "(proj) "
-    intro = """\n========= PROJ NAME =========\nENTER THE COLLAPSING SPACETIME with 'start <1~3>'\n"""
+class GameShell(cmd2.Cmd):
+    prompt = ">> "
 
     def __init__(self):
         super().__init__()
         self.player = None
-        self.slot = None
+        self.player_log = None
+        self.combat_manager = None
+        self.save_system = None
+    
+    def do_slots(self, arg):
+        existing = SaveSystem.list_slots()
+        if existing:
+            self.poutput(f"Existing slots: {existing}")
+        else:
+            self.poutput("No save slots found.")
+
+    def do_delete(self, arg):
+        try:
+            slot = int(arg.strip())
+            ss = SaveSystem(slot)
+            ss.delete_slot()
+            self.poutput(f"Slot {slot} deleted.")
+        except Exception as e:
+            self.poutput(f"Error: {e}")
 
     def do_start(self, arg):
-        """ENTER THE COLLAPSING SPACETIME : start < 1 | 2 | 3 >"""
-        slot = arg.strip()
-        if slot not in {"1", "2", "3"}:
-            print("Invalid Slot Number! Choose 1, 2, 3")
-            return
-        save = SaveSystem(int(slot))
-        data = save.load_player()
-        if data:
-            self.player = Player.from_dict(data)
-            print(f"Slot {slot} LOADED SUCCESSFULLY!")
-        else:
-            name = input("Player Name : ")
-            self.player = Player(name)
-            save.save_player(self.player)
-            print(f"NEW PLAYER '{name}' HAS BEEN CREATED SUCCESSFULLY")
-        self.slot = slot
+        try:
+            slot = int(arg.strip())
+            self.save_system = SaveSystem(slot)
+            loaded = self.save_system.load_player()
+            if loaded in None:
+                self.poutput("Starting a new Game")
+                init_weapon = item_registry["Basic Sword"]
+                import copy
+                weapon = copy.deepcopy(init_weapon)
+                self.player = Player(name="Normal Person", hp=100, weapon = weapon, passive = None)
+                self.player_log = {"time_played": 0, "battle_logs": [], "items_acquired": 0}
 
-    def do_fight(self, arg):
-        """ COMBAT STARTING """
-        if not self.player:
-            print("Start Game First with 'start <1~3>'")
-            return
-        difficulty = 1.0 + self.player.boss_count * 0.2
-        combat = Combat(self.player, difficulty, self.player.boss_count)
-        alive = combat.start_battle()
-
-        if not alive:
-            answer = input("Your Journey Ends Here. Do You Want to Get Back to First SPACETIME? (y/n) : ").lower()
-            if answer == 'y':
-                self.player = Player(name)
-                self.player.boss_count = 0
-                print("Your Journey Started Again from First SPACETIME")
             else:
-                print("QUIT GAME.")
-                return True
+                self.player, self.player_log = loaded
+                self.poutput(f"Loaded game for player {self.player.name}.")
 
-    def do_save(self, arg):
-        """ SAVE CURRENT STATUS """
-        if self.player:
-            SaveSystem(int(self.slot)).save_player(self.player)
-            print("SAVED SUCCESSFULLY")
-        else:
-            print("NO PLAYER DATA TO SAVE")
-
-    def do_inventory(self, arg):
-        if self.player:
-            self.player.show_inventory()
-        else:
-            print("NO PLAYER DATA")
+            self.combat_manager = CombatManager(self.player, self.save_system, self.player_log)
+            self.combat_manager.start_game()
+        except Exception as e:
+            self.poutput(f"Error: {e}")
 
     def do_exit(self, arg):
-        """ EXIT GAME """
-        print("QUIT GAME")
         return True
 
-    def do_slots(self, arg):
-        """ CHECKING SAVE SLOTS """
-        slots = list_save_slots()
-        print("SAVE SLOTS : ")
-        for slot in slots:
-            print(f" - SLOT {slot}")
-
 if __name__ == "__main__":
-    GameShell().cmdloop()
+    shell = GameShell()
+    shell.cmdloop()
+

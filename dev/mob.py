@@ -1,28 +1,76 @@
-class Mob:
-    def __init__(self, name, hp, attack, defense, drops):
+from character import Character
+from drop_table import *
+from dice import *
+from player import Player
+import math
+
+
+class Mob(Character):           # type : 'normal', 'elite', 'boss'
+    def __init__(self, name, base_hp, base_atk, base_def, skill = None, skill_chance = 0.0, mob_type = "normal", loop = 1):
+        scale = 1.0 + 0.1 * (loop - 1)
         self.name = name
-        self.hp = hp
-        self.attack = attack
-        self.defense = defense
-        self.drops = drops
+        self.hp = int(base_hp * scale)
+        self.atk = int(base_atk * scale)
+        self.defense = int(base_def * scale)
+        self.skill = skill
+        self.skill_chance = skill_chance
+        self.mob_type = mob_type
+
+        self.status_effects = []
+        self.stunned = False
+        self.turn_action = 1
 
     def is_alive(self):
         return self.hp > 0
 
-    def take_damage(self, amount):
-        damage = max(0, amount - self.defense)
-        self.hp -= damage
-        print(f"{self.name} has taken {damage} damage. Remaining HP : {self.hp}")
+    def reset_turn_state(self):
+        self.stunned = False
+        self.turn_action = 1
 
-    def attack_target(self, target):
-        print(f"{self.name} is attacking {target.name}!")
-        target.take_damage(self.attack)
+    def apply_statuses(self):
+        to_remove = []
+        for effect in self.status_effects:
+            effect.on_turn(self)
+            effect.duration -= 1
+            if effect.duration <= 0:
+                to_remove.append(effect)
 
-class EliteMob(Mob):
-    def __init__(self, name, hp, attack, defense, drops, skill):
-        super().__init__(name, hp, attack, defense, drops)
-        self.skill = skill
+        for e in to_remove:
+            self.status_effects.remove(e)
+
+
+    def is_stunned(self):
+        return self.stunned
+
+    def add_status(self, new_effect):
+        self.status_effects.append(new_effect)
+        if new_effect.__class__.__name__ == "StunEffect":
+            new_effect.apply_immediate(self)
+
+    def take_damage(self, damage):
+        dmg_after_def = max(0, damage - self.defense)
+        self.hp -= dmg_after_def
+        if self.hp < 0:
+            self.hp = 0
+
+    def attack(self.target):
+        roll = roll_d20()
+        result = interpret_roll(roll)
+        damage = 0
+
+        if result == "Fumble!":
+            damage = 0
+        if result == "Failure":
+            damage = 1
+        if result == "Success":
+            damage == self.atk
+        if result == "Critical":
+            damage == int(self.atk * 1.15)
+        if result == "Super Critical!":
+            damage == int(self.atk * 1.5)
 
     def use_skill(self, target):
-        print(f"{self.name} is using '{self.skill}'!")
-        # Method Override
+        pass
+
+    def __repr__(self):
+        return f"<Mob name = {self.name}, hp = {self.hp}, atk = {self.atk}, def = {self.defense}, type = {self.mob_type}>"

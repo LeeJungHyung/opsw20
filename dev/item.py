@@ -1,80 +1,58 @@
+from effect import *
 from dice import roll_d20, interpret_roll
+import copy
 
 class Item:
-    def __init__(self, name, description, rarity = "common", effect = None):
+    def __init__(self, name, description, rarity = "common", effect: Effect = None, status: StatusEffect = None):
         self.name = name
         self.description = description
         self.rarity = rarity
         self.effect = effect
-
-    def use(self, player):
-        print(f"You Used {self.name}!")
-
-<<<<<<< HEAD
-    def to_dict(self):
-        return {
-            'type': self.__class__.__name__,
-            'name': self.name,
-            'description': self.description,
-            'rarity': self.rarity,
-            'effct': self.effect
-        }
-
-=======
->>>>>>> tmp
-    def __str__(self):
-        effct = f", Effect : {self.effect}" if self.effect else ""      # Ternary Operators
-        return f"{self.name} (({self.rarity}) - {self.description}{effct})"
+        self.status = status
 
 class Weapon(Item):
-    def __init__(self, name, description, damage, rarity = "common", effect = None):
-        super().__init__(name, description, rarity, effect)
+    def __init__(self, name, description, damage, rarity = "common", effect: Effect = None, status: StatusEffect = None):
+        super().__init__(name, description, rarity, effect, status)
         self.damage = damage
 
 class Passive(Item):
-    def __init__(self, name, description, deffend, rarity="common", effect=None):
-        super().__init__(name, description, rarity, effect)
-        self.deffend = deffend
+    def __init__(self, name, description, rarity = "common", roll_effect: Effect= None, defense_effect: Effect = None, status: StatusEffect = None):
+        super().__init__(name, description, rarity, effect = None, status = status)
+        self.roll_effect = roll_effect
+        self.defense_effect = defense_effect
 
-    def use(self, player):
-        pass        # override later
+    def apply_defense_bonus(self, roll, category: str):
+        if self.defense_effect and category not in ("Fumble", "Failure"):        # will be detailed
+            return self.defense_effect.apply(roll, category)
+        return 0
 
-class Active(Item):
-    def __init__(self, name, description, max_uses, rarity = "common", effect = None):
-        super().__init__(name, description, rarity, effect)
-        self.max_uses = max_uses
-        self.remaining = max_uses
+class Active(Item):     # if target is True -> target of item is Enemy, if False than target is player
+    def __init__(self, name, description, rarity = "common", effect: Effect = None, target: list = None, uses = 1, status: StatusEffect = None):
+        super().__init__(name, description, rarity, effect, status)
+        self.uses = uses
+        self.target = target if target is not None else []
 
-    def use(self, player):
-        if self.remaining <= 0:
-            print(f"You Can't Use {self.name} Anymore!")
-            return False
-
-        super().use(player)
-        print(f"REMAIN : {self.remaining - 1} out of {self.max_uses}")
-
+    def use(self, user, target):
         roll = roll_d20()
         result = interpret_roll(roll)
-        self.activate_effect(player, result)
+        value = 0
 
-        self.remaining -= 1
-        if self.remaining <= 0:
-            print(f"{self.name} Has Been Used Up.")
-            return True
-        return False
+        if result not in ("Fumble", "Failure"):
+            if self.effect:
+                value = self.effect.apply(roll, result)
+            if self.status:
+                dur = self.status.duration + (1 if result == "Super Critical!" else 0)
+                new_status = copy.deepcopy(self.status)
+                new_status.duration = dur
+                if "enemy" in self.target:
+                    target.add_status(new_status)
+                else:
+                    user.add_status(new_status)
 
-    def activate_effect(self, player, result):
-        pass        # overrid later
-<<<<<<< HEAD
+        if not self.target:
+            user.hp += value
+        else:
+            target.take_damage(value)
 
-    def to_dict(self):
-        base = super().to_dict()
-        base.update(
-            {
-                'max_uses': self.max_uses,
-                'remaining_uses': self.remaining
-            }
-        )
-        return base
-=======
->>>>>>> tmp
+        self.uses -= 1
+        return roll, result, value
