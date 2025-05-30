@@ -1,25 +1,35 @@
 import random
+from dev import mob
 from mob import *
-from drop_table import drop_table
+from drop_table import *
 
-def get_drops(mob, max_drops = 1):
-    rarity = mob.drops
-    pool = drop_table.get(rarity, [])
-    random.shuffle(pool)
+def get_drops(mob: Mob, max_drops = 1):
+    return mob.get_drops(max_drops)
 
-    drops = []
-    for entry in pool:
-        if random.random() <= entry["chance"]:
-            drops.append(entry["item"])
-            if len(drops) >= max_drops:
-                break
-    return drops
+def Junior_Time_Warden():       # basic example of normal mob
+    return Mob(
+        name = "Junior_Time_Warden",
+        hp = 50,
+        attack = 10,
+        mob_type = "normal"
+    )
 
-def Junior_Time_Warden():
-    return Mob("Junior Time Warden", 50, 10, 5, "common")
+def Senior_Time_Warden():       # basic example of elite mob
+    return Mob(
+        name = "Senior_Time_Warden", 
+        hp = 65, 
+        attack = 15, 
+        skill = "Chronolock",
+        skill_chance = 0.25,
+        mob_type = "elite"
+    )
 
-def Senior_Time_Warden():
-    return EliteMob("Senior_Time_Warden", 65, 15, 10, "rare", "Chronolock")
-
-def Devourer_of_Time():
-    return EliteMob("Devourer_of_Time", 120, 20, 15, "legendary", "Collapse Reforged")
+def Devourer_of_Time():         # basic example of boss mob
+    return Mob(
+        name = "Devourer_of_Time", 
+        hp = 120, 
+        attack = 20,
+        skill = "Collapse Reforged",
+        skill_chance = 0.3,
+        mob_type = "boss"
+    )

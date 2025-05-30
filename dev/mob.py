@@ -1,28 +1,34 @@
-class Mob:
-    def __init__(self, name, hp, attack, defense, drops):
-        self.name = name
-        self.hp = hp
-        self.attack = attack
-        self.defense = defense
-        self.drops = drops
+from character import Character
+from drop_table import *
+from dice import *
+from player import Player
 
-    def is_alive(self):
-        return self.hp > 0
 
-    def take_damage(self, amount):
-        damage = max(0, amount - self.defense)
-        self.hp -= damage
-        print(f"{self.name} has taken {damage} damage. Remaining HP : {self.hp}")
-
-    def attack_target(self, target):
-        print(f"{self.name} is attacking {target.name}!")
-        target.take_damage(self.attack)
-
-class EliteMob(Mob):
-    def __init__(self, name, hp, attack, defense, drops, skill):
-        super().__init__(name, hp, attack, defense, drops)
+class Mob(Character):           # type : 'normal', 'elite', 'boss'
+    def __init__(self, name, hp, attack, skill = None, skill_chance: float = 0.0, mob_type = 'normal'):
+        super().__init__(name, hp)
+        self.atk = attack
         self.skill = skill
+        self.skill_chance = skill_chance
+        self.mob_type = mob_type
 
-    def use_skill(self, target):
-        print(f"{self.name} is using '{self.skill}'!")
-        # Method Override
+    def get_drops(self, max_drops = 1):
+        return roll_drops(self.mob_type, max_drops)
+
+    def take_turn(self, opponents):
+        self.apply_statuses()
+        roll = roll_d20()
+        result = interpret_roll(roll)
+        damage = self.atk if result not in ("Fumble", "Failure") else 0
+        
+        if self.skill and random.random() < self.skill_chance:
+            damage += self.skill.apply(roll, result)
+        target = opponents[0]
+        
+        if isinstance(target, Player):
+            damage = target.defend(damage)
+        
+        else:
+            target.take_damage(damage)
+        
+        return roll, result, damage

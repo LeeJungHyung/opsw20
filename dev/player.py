@@ -1,188 +1,86 @@
-from types import NoneType
-from dice import roll_d20, interpret_roll
-from item import Weapon, Passive, Active
+from effect import *
+from dice import *
+from item import *
+from character import Character
 
-class Player:
-    def __init__(self, name):
-        self.name = name
-        self.hp = 100
-        self.base_attack = 10
-        self.base_defense = 0
+class Player(Character):
+    def __init__(self, name, hp, weapon: Weapon, passive: Passive, active_slots = 3):
+        super().__init__(name, hp)
+        self.weapon = weapon
+        self.passive = passive
+        self.active_items: list[Active] = []
+        self.active_slots = active_slots
+        self.turn_action = 3
 
-        self.weapon_slot = None
-        self.passive_slot = None
-<<<<<<< HEAD
-        self.active_slot = [None, None, None]
+    def reset_actions(self):
+        self.turn_action = 3
 
-    def is_alive(self):
-        return self.hp > 0
-
-    def equip_item(self, item):
-        if isinstance(item, Weapon):
-            print(f"\n{item.name} EQUIPPED (REPLACING CURRENT WEAPON)")
-            self.weapon_slot = item
-        elif isinstance(item, Passive):
-            print(f"\n{item.name} EQUIPPED (REPLACING CURRENT PASSIVE)")
-            self.passive_slot = item
-        elif isinstance(item, Active):
-            for i in range(len(self.active_slot)):
-                if self.active_slot[i] is None:
-                    self.active_slot[i] = item
-                    print(f"\n{item.name} EQUIPPED in ACTIVE SLOT {i+1}")
-                    return
-            # EXCEPTION WHEN ACTIVE SLOT IS FULL
-            print("ACTIVE SLOT IS FULL!")
-            self.show_inventory()
-            try:
-                choice = int(input("\nCHOOSE ACTIVE SLOT TO REPLACE : ")) -1
-                if 0 <= choice < 3:
-                    print(f"\nREPLACED {self.active_slot[choice].name} -> {item.name}")
-                    self.active_slot[choice] = item
-            except:
-                print("YOU ONLY HAVE SLOT 1, 2, 3")
-
-    def show_inventory(self):
-        print(f"\n========= {self.name}'s Inventory =========\n")
-        print(f" Weapon : {self.weapon_slot.name if self.weapon_slot else 'NONE'}\n")
-        print(f" Passive : {self.passive_slot.name if self.passive_slot else 'NONE'}\n")
-        print(" Active Slots : ")
-        for i, item in enumerate(self.active_slot):
-            if item:
-                print(f"  [{i+1}] {item.name} ({item.remaining_uses}/{item.max_uses})")
-            else:
-                print(f"  [{i+1}] - NONE")
-=======
-        self.active_slot = None
-
-    def equip_item(self, item):
-        if isinstance(item, Weapon):
-            if self.weapon_slot:
-                print(f"Switch Weapon to {item.name}.")
-            self.weapon_slot = item
-
-        elif isinstance(item, Passive):
-            if self.passive_slot:
-                print(f"Switch Passive Item to {item.name}")
-            self.passive_slot = item
-
-        elif isinstance(item, Active):
-            if self.active_slot:
-                print(f"Switch Active Item to {item.name}")
-            self.active_slot = item
->>>>>>> tmp
-
-    def get_total_attack(self):
-        bonus = self.weapon_slot.damage if self.weapon_slot else 0
-        return self.base_attack + bonus
-
-    def get_total_defense(self):
-        bonus = 0
-        if self.passive_slot and self.passive_slot.effect:
-            if self.passive_slot.effect.get("type") == "defense_boost":
-                bonus += self.passive_slot.effect.get("value", 0)
-
-        return bonus
-
-    def attack(self, target):
+    def defend(self, damaged):
+        buff = 0
+        if isinstance(self.passive.effect, DefenseReductionEffect):
+            buff = self.passive.effect.apply(0, "")
+        damaged = max(0, damaged - buff)
         roll = roll_d20()
         result = interpret_roll(roll)
-        total_attack = self.get_total_attack()
+
+        if result not in ("Fumble!", "Failure") and self.passive.DefenseReductionEffect:
+            damaged = self.passive.DefenseReductionEffect.apply(damaged, result)
+        elif result == "Fumble!":
+            print(f"Defense Roll - Fumbled! | You take full damage!")
+        self.hp = max(0, self.hp - damaged)
+        
+        return damaged
+
+    def take_turn(self, opponents):
+        self.apply_statuses()
+        pass
+
+    def attack(self, target: Character):
+        roll = roll_d20()
+        result = interpret_roll(roll)
+        buff = 0
+        if isinstance(self.weapon.effect, DamageBonusEffect):
+            buff = self.weapon.effect.apply(0, "")
+        damage = self.weapon.damage + buff  
         print(f"{self.name} Rolled the Dice : {roll} ({result})")
 
         if result == "Fumble!":
             print("You Missed Attack!")
-            return
-
+            damage = 0
         if result == "Failure":
-            damage = 1
+            damage = 5
         elif result == "Success":
-            damage = total_attack
+            pass
         elif result == "Critical":
-            damage = (total_attack * 1.2)
-<<<<<<< HEAD
+            damage = (damage * 1.2)
         elif result == "Super Critical!":
-            damage = (total_attack * 1.5)
+            damage = (damage * 1.5)
 
         target.take_damage(damage)
         print(f"You Damaged {damage} to {target.name}!")
-=======
-        elif result == "Super Critical!"
-            damage = (total_attack * 1.5)
 
-        target.take_damage(damage)
-            print(f"You Damaged {damage} to {target.name}!")
->>>>>>> tmp
-
-        if self.weapon_slot and self.weapon_slot.effect:
-            self.apply_effect(self.weapon_slot.effect, target)
-
-<<<<<<< HEAD
-    def use_item(self, name):
-        for i, item in enumerate(self.active_slot):
-            if item and item.name.lower() == name.lower():
-                used = item.use(self)
-                if used and item.remaining_uses <= 0:
-                    self.active_slot[i] = None
-                return True
-        print(f"{name} Does NOT Exist or Cannot Use")
-        return False
-=======
-    def use_active_item(self):
-        if self.active_slot:
-            consumed = self.active_slot.use(self)
-            if consumed:
-                print(f"You Used {self.active_slot.name}")
-                self.active_slot = None
-
+    def use_active(self, slot_idx, target: Character):          # will be detatiled later
+        if slot_idx < 0 or slot_idx >= len(self.active_items):
+            raise IndexError("Invalid active slot")
+        item = self.active_items[slot_idx]
+        roll = roll_d20()
+        result = interpret_roll(roll)
+        val = 0
+        if result not in ("Fumble!", "Failure") and item.effect:
+            val = item.effect.apply(roll, result)
+        if item.status:
+            if result in ("Success", "Critical", "Super Critical!"):
+                dur = item.status.duration + (1 if result == "Super Critical!" else 0)
+                target.add_status(type(item.status)(**{k:v for k, v in item.status.__dict__.items() if k!='duration'}, duration = dur))
+            elif result == "Fumble!":
+                self.add_status(type(item.status)(**{k:v for k, v in item.status.__dict__.items() if k!='duration'}, duration = item.status.duration))
+        item.uses -= 1
+        if not item.targets:
+            self.heal(val)
         else:
-            print("You Don't Have Items.")
->>>>>>> tmp
-
-    def take_damage(self, amount):
-        damage = max(0, amount - self.get_total_defense())
-        self.hp -= damage
-        print(f"{self.name} Damaged {damage}. Remain HP: {self.hp}")
-
-    def heal(self, amount):
-        self.hp += amount
-        print(f"{self.name} Healed {amount}. Remain HP: {self.hp}")
-
-    def apply_effect(self, effect, target = None):
-        # On Develop
-        if not effect:
-            return
-<<<<<<< HEAD
-
-    def to_dict(self):
-        return {
-            'name': self.name,
-            'hp': self.hp,
-            'boss_count': getattr(self, 'boss_count', 0),
-            'weapon': self.weapon_slot.to_dict() if self.weapon_slot else None,
-            'passive': self.passive_slot.to_dict() if self.passive_slot else None,
-            'actives': [item.to_dict() if item else None for item in self.active_slot]
-        }
-    
-    @classmethod
-    def from_dict(cls, data):
-        player = cls(data['name'])
-        player.hp = data.get('hp', 100)
-        player.boss_count = data.get('boss_count', 0)
-
-        if data['weapon']:
-            player.weapon_slot = Weapon(**data['weapon'])
-
-        if data['passive']:
-            player.passive_slot = Passive(**data['passive'])
-
-        player.active_slot = []
-        for item_data in data['actives']:
-            if item_data:
-                item = Active(**item_data)
-                player.active_slot.append(item)
-            else:
-                player.active_slot.append(None)
-
-        return player
-=======
->>>>>>> tmp
+            target.take_damage(val)
+        
+        if item.uses <= 0:
+            self.active_items.pop(slot_idx)
+        self.turn_action -= 1
+        return roll, result, val
