@@ -1,8 +1,5 @@
-# item.py
-
 from dice import roll_d20, interpret_roll
 from effects import BleedEffect, FireEffect, StunEffect, RegenEffect, DamageBonusEffect, DefenseReductionEffect
-# ↑ 반드시 'effects.py' 파일로 위에서 제공한 Effect/StatusEffect 클래스 구현이 존재해야 함
 
 def create_effect_instance(effect_dict):
     if not effect_dict:
@@ -67,7 +64,7 @@ class Passive(Item):
     def use(self, player):
         effect = create_effect_instance(self.effect)
         if effect:
-            player.apply_temp_effect(effect)  # 이 함수는 플레이어 클래스에서 정의되어야 함
+            player.apply_temp_effect(effect)  
 
 
 class Active(Item):
