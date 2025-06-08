@@ -1,4 +1,3 @@
-from dev import effect
 from item import *
 from effect import *
 

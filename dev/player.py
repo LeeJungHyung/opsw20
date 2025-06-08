@@ -2,6 +2,7 @@ from effect import *
 from dice import *
 from item import *
 from character import Character
+from mob import Mob
 
 class Player(Character):
     def __init__(self, name, hp, weapon: Weapon, passive: Passive, active_slots = 3):
@@ -11,6 +12,7 @@ class Player(Character):
         self.active_items: list[Active] = []
         self.active_slots = active_slots
         self.turn_action = 3
+        self.log: list[str] = []
 
     def reset_action(self):
         self.turn_action = 3
@@ -31,11 +33,95 @@ class Player(Character):
         
         return damaged
 
-    def take_turn(self, opponents):
-        self.apply_statuses()
-        pass
+    def take_turn(self, opponents: list[Mob]):
+        self.display_battle_status(opponents)
+        cmd = input(f"{self.name} (HP:{self.hp}, Actions:{self.turn_action}) >> ").strip().split()
+        if not cmd:
+            return
 
-    def attack(self, target: Character):
+        action = cmd[0].lower()
+
+        if action == "attack" and len(cmd) == 2:
+            try:
+                idx = int(cmd[1]) - 1
+                target = opponents[idx]
+                if not target.is_alive():
+                    print("YOU ALREADY KILLED THAT GUY.")
+                    return
+                
+                damage = self.weapon.damage
+                roll = roll_d20()
+                result = interpret_roll(roll)
+                if result == "Fumble":
+                    damage = 0
+                if result == "Failure":
+                    damage = 1
+                if result == "Success":
+                    damage = self.weapon.damage
+                if result == "Critical":
+                    damage = int(self.weapon.damage * 1.15)
+                if result == "Super Critical!":
+                    damage = int(self.weapon.damage * 1.5)
+
+                # will add effect +damage
+
+                target.take_damage(damage)
+                print(f"You Rolled {roll}({result}) and dealt {damage} to {target.name}!")
+                print(f"{target.name}'s HP: {target.hp}")
+                self.log.append(f"{self.name} attacked {target.name}: {roll}({result}) -> {damage}")
+                self.turn_action -= 1
+            except (ValueError, IndexError):
+                print("Usage: attack <vaild_enemy_index>")
+
+        elif action == "inventory":
+            print(f"Weapon: {self.weapon.name} (Damage: {self.weapon.damage})")
+            print(f"Passive: {self.passive.name if self.passive else 'None'}")
+            print("Active Items:")
+            if not self.active_items:
+                print(" (None)")
+            else:
+                for i, it in enumerate(self.active_items, start=1):
+                    print(f"  [{i}] {it.name} (Uses left: {it.uses})")
+
+
+        elif action == "use" and len(cmd) in (2,3):
+            try:
+                slot = int(cmd[1]) - 1
+                item = self.active_items[slot]
+                if len(cmd) == 3:
+                    tidx = int (cmd[2]) - 1
+                    target = opponents[tidx]
+                else:
+                    target = self
+
+                roll, result, value = item.use(self, target)
+                    
+                print(
+                    f"You used {item.name} on "
+                    f"{'self' if target is self else target.name}. "
+                    f"{roll}({result}) -> {value}"
+                )
+                self.log.append(
+                    f"{self.name} used {item.name} on "
+                    f"{'self' if target is self else target.name}: "
+                    f"{roll}({result}) → {value}"
+                )
+
+                if item.uses <= 0:
+                    self.active_items.pop(slot)
+                self.turn_action -= 1
+            except (ValueError, IndexError):
+                print("Usage: use <valid_item_index> [<enemy_index>]")
+
+        elif action == "save":
+            self.save_system.save_player(self, self.player_log)
+            print("Game saved.")
+
+        elif action == "quit":
+            print("Exiting game.")
+            exit(0)
+
+    def attack(self, target: Mob):
         roll = roll_d20()
         result = interpret_roll(roll)
         buff = 0
@@ -84,3 +170,17 @@ class Player(Character):
             self.active_items.pop(slot_idx)
         self.turn_action -= 1
         return roll, result, val
+    
+    def display_battle_status(self, opponents: list[Mob]):
+        print("========= Current Situation =========")
+        names = ["YOU"] + [m.name for m in opponents]
+        hps = [f"HP:{self.hp}"] + [f"HP:{m.hp}" for m in opponents]
+        widths = [max(len(n), len(h)) for n, h in zip(names, hps)]
+        for name, w in zip(names, widths):
+            print(name.ljust(w + 2), end='')
+        print()
+        for hp, w in zip(hps, widths):
+            print(hp.ljust(w + 2), end='')
+        print()
+        total_width = sum(widths) + 2 * len(widths)
+        print("=" * total_width)

@@ -1,11 +1,8 @@
-from character import Character
 from drop_table import *
 from dice import *
-from player import Player
-import math
 
 
-class Mob(Character):           # type : 'normal', 'elite', 'boss'
+class Mob():           # type : 'normal', 'elite', 'boss'
     def __init__(self, name, base_hp, base_atk, base_def, skill = None, skill_chance = 0.0, mob_type = "normal", loop = 1):
         scale = 1.0 + 0.1 * (loop - 1)
         self.name = name
@@ -20,7 +17,7 @@ class Mob(Character):           # type : 'normal', 'elite', 'boss'
         self.stunned = False
         self.turn_action = 1
 
-    def is_alive(self):
+    def is_alive(self) -> bool:
         return self.hp > 0
 
     def reset_turn_state(self):
@@ -53,7 +50,7 @@ class Mob(Character):           # type : 'normal', 'elite', 'boss'
         if self.hp < 0:
             self.hp = 0
 
-    def attack(self.target):
+    def attack(self, target):
         roll = roll_d20()
         result = interpret_roll(roll)
         damage = 0
@@ -68,6 +65,8 @@ class Mob(Character):           # type : 'normal', 'elite', 'boss'
             damage == int(self.atk * 1.15)
         if result == "Super Critical!":
             damage == int(self.atk * 1.5)
+
+        return roll, result, damage
 
     def use_skill(self, target):
         pass

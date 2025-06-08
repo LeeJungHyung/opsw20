@@ -1,4 +1,3 @@
-import os
 import pathlib
 import copy
 from tinydb import TinyDB
@@ -17,7 +16,8 @@ class SaveSystem:
         self.SAVE_DIR.mkdir(parents=True, exist_ok=True)
         self.filepath = self.SAVE_DIR / f"slot_{slot_number}.json"
         self.db = TinyDB(self.filepath)
-
+    
+    @classmethod
     def list_slots(cls):
         return [n for n in cls.VALID_SLOTS if (cls.SAVE_DIR / f"slot_{n}.json").exists()]
 
@@ -37,6 +37,9 @@ class SaveSystem:
                 {"name": item.name, "uses": item.uses}
                 for item in player.active_items
             ],
+            "time_played": player_log.get("time_played", 0),
+            "battle_logs": player_log.get("battle_logs", []),
+            "item_aquired": player_log.get("items_acquired", 0)
         }
         self.db.insert(record)
 
@@ -47,10 +50,11 @@ class SaveSystem:
 
         rec = all_records[0]
         weapon_proto = item_registry[rec["weapon"]]
-        passive_proto = item_registry[rec["passive"]]
-
         weapon = copy.deepcopy(weapon_proto)
-        passive = copy.deepcopy(passive_proto)
+        passive = None
+        if rec.get("passive"):
+            passive_proto = item_registry[rec["passive"]]
+            passive = copy.deepcopy(passive_proto)
 
         player = Player(
             name=rec["name"],
@@ -66,9 +70,11 @@ class SaveSystem:
             item_copy.uses = entry["uses"]
             player.active_items.append(item_copy)
 
-        """     will addd player statics log later
-        player_log = { }
-        """
+        player_log = {
+            "time_played": rec.get("time_played", 0),
+            "battle_logs": rec.get("battle_logs", []),
+            "items_acquired": rec.get("items_acquired", 0)
+        }
 
         return player #, player_log
 

@@ -1,4 +1,3 @@
-from enum import EnumMeta
 import random
 from typing import List
 from player import *
@@ -34,7 +33,7 @@ class CombatManager:
             raise ValueError(f"Invalid stage: {stage_number}")
 
     def stage_one(self) -> bool:
-        print("--------- Stage 1 (Loop {self.current_loop}) ---------")
+        print(f"--------- Stage 1 (Loop {self.current_loop}) ---------")
         for battle_index in range(5):
             enemies: List[Mob] = get_stage_enemies(self.current_loop, 1, battle_index)
             print(f"\n[Stage 1] Enemies : {[m.name for m in enemies]}")
@@ -89,7 +88,7 @@ class CombatManager:
             self.player.reset_action()
             while self.player.turn_action > 0 and self.player.is_alive():
                 self.player.take_turn(enemies)
-                if no any(m.is_alive() for m in enemies):
+                if not any(m.is_alive() for m in enemies):
                     break
 
             if not any(m.is_alive() for m in enemies):
@@ -98,25 +97,25 @@ class CombatManager:
             for mob in enemies:
                 if not mob.is_alive():
                     continue
-
                 mob.apply_statuses()
 
                 if mob.is_stunned():
+                    self.player_log['battle_logs'].append(f"{m.name} is stunned and skips its turn.")
                     mob.reset_turn_state()
                     continue
-
-                used_skill = False
-                if mob.skill and hasattr(mob, 'skill_chance'):
-                    if random.random() <= mob.skill_chance:
-                        damage, status_effect = mob.used_skill(self.player)
-                        used_skill = True
-
-                if not used_skill:
-                    roll, category, damage = mob.attack(self.player)
+                
+                if mob.skill and random.random() <= mob.skill_chance:
+                    roll, result, damage = mob.use_skill(self.player)
+                else:
+                    roll, result, damage = mob.attack(self.player)
+                
+                def_bonus = (self.player.passive.apply_defense_bonus(roll, result) if getattr(self.player, "passive", None) is not None else 0)
+                actual = max(0, damage - def_bonus)
+                self.player.take_damage(actual)
                 
                 mob.reset_turn_state()
-
                 if not self.player.is_alive():
+                    self.player_log['battle_logs'].append(f"{self.player.name} was defeated by {mob.name}.")
                     break
 
             if not self.player.is_alive():
@@ -129,11 +128,10 @@ class CombatManager:
                 if not mob.is_alive():
                     total_drops.extend(get_drops(mob, max_drops=1))
 
-            if total_drops:
-                print(f"\nLoot dropped: {[item.name for item in total_drops]}")
-                for item in total_drops:
-                    print(f"Acquired: {item.name}")
-                    self.player_log['item_acquired'] += 1
+            for item in total_drops:
+                print(f"Loot dropped: {item.name}")
+                choice = input(f"Equip/use {item.name}? (y/n)> "). strip().lower()
+                if choice.startswith('y'):
                     if isinstance(item, type(self.player.weapon)):
                         self.player.weapon = item
                     elif isinstance(item, type(self.player.passive)):
@@ -142,11 +140,19 @@ class CombatManager:
                         if len(self.player.active_items) < self.player.active_slots:
                             self.player.active_items.append(item)
                         else:
-                            print(f"No Active slot free, {item.name} discarded.")
+                            if len(self.player.active_items) < self.player.active_slots:
+                                self.player.active_items.append(item)
+                            else:
+                                print(f"No active slot free, discarding {item.name}.")
+                    self.player_log['items_acquired'] = self.player_log.get('items_acquired', 0) + 1
+                    self.player_log['battle_logs'].append(f"Acquired {item.name}.")
+                else:
+                    print(f"Discarded {item.name}.")
 
-            self.player_log['battle_logs'].append(f"Battle wit {[m.name for m in enemies]} won.")
+            self.player_log['battle_logs'].append(f"Battle with {[m.name for m in enemies]} won.")
             self.save_system.save_player(self.player, self.player_log)
             return True
+
         else:
             print("\n>>> YOU DIED <<<")
             self.player_log['battle_logs'].append("Player died. Game OVER.")
