@@ -4,6 +4,17 @@ from combat import *
 from item_registry import *
 import cmd2
 import copy
+from colorama import Fore, Style, init
+
+init(autoreset=True)
+
+title_art = r"""
+ ____  _____ ____  _      ____   ___  _     
+/  __\\/  __//  _ \\ \__/|/  _ \\ / _ \\/_ \    
+|  \/||  \  | / \|| |\/||| / \|| / \|| |    
+|    /|  /_ | \_/|| |  ||| \_/|| \_/|| |_/\ 
+\_/\_\\\____\\____/\_/  \|\____/\____/\____/
+"""
 
 class GameShell(cmd2.Cmd):
     prompt = ">> "

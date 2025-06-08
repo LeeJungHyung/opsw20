@@ -16,7 +16,7 @@ class SaveSystem:
         self.SAVE_DIR.mkdir(parents=True, exist_ok=True)
         self.filepath = self.SAVE_DIR / f"slot_{slot_number}.json"
         self.db = TinyDB(self.filepath)
-    
+
     @classmethod
     def list_slots(cls):
         return [n for n in cls.VALID_SLOTS if (cls.SAVE_DIR / f"slot_{n}.json").exists()]
@@ -26,20 +26,20 @@ class SaveSystem:
         if self.filepath.exists():
             self.filepath.unlink()
 
-    def save_player(self, player):          # will add player statics log later
+    def save_player(self, player, player_log):
         self.db.truncate()
         record = {
             "name": player.name,
             "hp": player.hp,
             "weapon": player.weapon.name,
-            "passive": player.passive.name,
+            "passive": player.passive.name if player.passive else None,
             "active_items": [
-                {"name": item.name, "uses": item.uses}
+                {"name": item.name, **({"uses": item.uses} if hasattr(item, "uses") else {})}
                 for item in player.active_items
             ],
             "time_played": player_log.get("time_played", 0),
             "battle_logs": player_log.get("battle_logs", []),
-            "item_aquired": player_log.get("items_acquired", 0)
+            "items_acquired": player_log.get("items_acquired", 0)
         }
         self.db.insert(record)
 
@@ -76,5 +76,4 @@ class SaveSystem:
             "items_acquired": rec.get("items_acquired", 0)
         }
 
-        return player #, player_log
-
+        return player, player_log

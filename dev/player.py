@@ -3,6 +3,67 @@ from dice import *
 from item import *
 from character import Character
 from mob import Mob
+from colorama import Fore, Style, Back, init
+import time
+import os
+import random
+
+init(autoreset=True)
+
+style_map = {
+    "Fumble!": Fore.WHITE + Back.RED + Style.BRIGHT,
+    "Failure": Fore.BLACK + Back.YELLOW,
+    "Success": Fore.GREEN + Style.BRIGHT,
+    "Critical": Fore.BLUE + Style.BRIGHT,
+    "Super Critical!": Fore.MAGENTA + Back.WHITE + Style.BRIGHT,
+}
+
+dice_frames = [
+    r"""
+     _______
+    |       |
+    |   o   |
+    |_______|
+    """,
+    r"""
+     _______
+    | o     |
+    |       |
+    |_____o_|
+    """,
+    r"""
+     _______
+    | o     |
+    |   o   |
+    |_o_____|
+    """,
+    r"""
+     _______
+    | o   o |
+    |       |
+    |_o___o_|
+    """,
+    r"""
+     _______
+    | o   o |
+    |   o   |
+    |_o___o_|
+    """,
+    r"""
+     _______
+    | o   o |
+    | o   o |
+    |_o___o_|
+    """
+]
+
+def ascii_dice_roll_animation(frames=10, delay=0.08):
+    for _ in range(frames):
+        face = random.choice(dice_frames)
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(Fore.CYAN + face)
+        time.sleep(delay)
+    print()
 
 class Player(Character):
     def __init__(self, name, hp, weapon: Weapon, passive: Passive, active_slots = 3):
@@ -22,19 +83,28 @@ class Player(Character):
         if isinstance(self.passive.effect, DefenseReductionEffect):
             buff = self.passive.effect.apply(0, "")
         damaged = max(0, damaged - buff)
+        ascii_dice_roll_animation()
         roll = roll_d20()
         result = interpret_roll(roll)
+        print(style_map.get(result, Fore.CYAN) + f"Defense Roll: {roll} ({result})")
 
         if result not in ("Fumble!", "Failure") and self.passive.DefenseReductionEffect:
             damaged = self.passive.DefenseReductionEffect.apply(damaged, result)
         elif result == "Fumble!":
-            print(f"Defense Roll - Fumbled! | You take full damage!")
+            print(Fore.RED + f"Defense Roll - Fumbled! | You take full damage!")
         self.hp = max(0, self.hp - damaged)
         
         return damaged
 
     def take_turn(self, opponents: list[Mob]):
+        print(Fore.MAGENTA + Style.BRIGHT + "\n--== YOUR TURN ==--\n")
         self.display_battle_status(opponents)
+
+        print(Fore.YELLOW + "Available Commands:")
+        print(Fore.YELLOW + "- attack <enemy index>")
+        print(Fore.YELLOW + "- use <item index> [enemy index>")
+        print(Fore.YELLOW + "- inventory, save, quit\n")
+
         cmd = input(f"{self.name} (HP:{self.hp}, Actions:{self.turn_action}) >> ").strip().split()
         if not cmd:
             return
@@ -46,43 +116,45 @@ class Player(Character):
                 idx = int(cmd[1]) - 1
                 target = opponents[idx]
                 if not target.is_alive():
-                    print("YOU ALREADY KILLED THAT GUY.")
+                    print(Fore.RED + "YOU ALREADY KILLED THAT GUY.")
                     return
-                
+
                 damage = self.weapon.damage
+                ascii_dice_roll_animation()
                 roll = roll_d20()
                 result = interpret_roll(roll)
-                if result == "Fumble":
+                style = style_map.get(result, Fore.CYAN)
+                print(style + f"You Rolled {roll} ({result})")
+
+                if result == "Fumble!":
                     damage = 0
-                if result == "Failure":
+                elif result == "Failure":
                     damage = 1
-                if result == "Success":
+                elif result == "Success":
                     damage = self.weapon.damage
-                if result == "Critical":
+                elif result == "Critical":
                     damage = int(self.weapon.damage * 1.15)
-                if result == "Super Critical!":
+                elif result == "Super Critical!":
                     damage = int(self.weapon.damage * 1.5)
 
-                # will add effect +damage
-
                 target.take_damage(damage)
-                print(f"You Rolled {roll}({result}) and dealt {damage} to {target.name}!")
-                print(f"{target.name}'s HP: {target.hp}")
+                print(Fore.YELLOW + f"Dealt {damage} to {target.name}!")
+                print(Fore.RED + f"{target.name}'s HP: {target.hp}")
+                print(Fore.RED + Style.BRIGHT + "*SLASH!* 💥")
                 self.log.append(f"{self.name} attacked {target.name}: {roll}({result}) -> {damage}")
                 self.turn_action -= 1
             except (ValueError, IndexError):
-                print("Usage: attack <vaild_enemy_index>")
+                print("Usage: attack <valid_enemy_index>")
 
         elif action == "inventory":
-            print(f"Weapon: {self.weapon.name} (Damage: {self.weapon.damage})")
-            print(f"Passive: {self.passive.name if self.passive else 'None'}")
-            print("Active Items:")
+            print(Fore.CYAN + f"Weapon: {self.weapon.name} (Damage: {self.weapon.damage})")
+            print(Fore.CYAN + f"Passive: {self.passive.name if self.passive else 'None'}")
+            print(Fore.CYAN + "Active Items:")
             if not self.active_items:
                 print(" (None)")
             else:
                 for i, it in enumerate(self.active_items, start=1):
                     print(f"  [{i}] {it.name} (Uses left: {it.uses})")
-
 
         elif action == "use" and len(cmd) in (2,3):
             try:
@@ -94,18 +166,11 @@ class Player(Character):
                 else:
                     target = self
 
+                ascii_dice_roll_animation()
                 roll, result, value = item.use(self, target)
-                    
-                print(
-                    f"You used {item.name} on "
-                    f"{'self' if target is self else target.name}. "
-                    f"{roll}({result}) -> {value}"
-                )
-                self.log.append(
-                    f"{self.name} used {item.name} on "
-                    f"{'self' if target is self else target.name}: "
-                    f"{roll}({result}) → {value}"
-                )
+                style = style_map.get(result, Fore.CYAN)
+                print(style + f"Used {item.name} on {'self' if target is self else target.name}: {roll} ({result}) → {value}")
+                self.log.append(f"{self.name} used {item.name} on {'self' if target is self else target.name}: {roll}({result}) → {value}")
 
                 if item.uses <= 0:
                     self.active_items.pop(slot)
@@ -115,42 +180,46 @@ class Player(Character):
 
         elif action == "save":
             self.save_system.save_player(self, self.player_log)
-            print("Game saved.")
+            print(Fore.GREEN + "Game saved.")
 
         elif action == "quit":
-            print("Exiting game.")
+            print(Fore.MAGENTA + "Exiting game.")
             exit(0)
 
     def attack(self, target: Mob):
+        ascii_dice_roll_animation()
         roll = roll_d20()
         result = interpret_roll(roll)
+        style = style_map.get(result, Fore.CYAN)
+        print(style + f"{self.name} Rolled the Dice : {roll} ({result})")
+
         buff = 0
         if isinstance(self.weapon.effect, DamageBonusEffect):
             buff = self.weapon.effect.apply(0, "")
         damage = self.weapon.damage + buff  
-        print(f"{self.name} Rolled the Dice : {roll} ({result})")
 
         if result == "Fumble!":
-            print("You Missed Attack!")
+            print(Fore.RED + "You Missed Attack!")
             damage = 0
-        if result == "Failure":
+        elif result == "Failure":
             damage = 5
-        elif result == "Success":
-            pass
         elif result == "Critical":
-            damage = (damage * 1.2)
+            damage *= 1.2
         elif result == "Super Critical!":
-            damage = (damage * 1.5)
+            damage *= 1.5
 
         target.take_damage(damage)
-        print(f"You Damaged {damage} to {target.name}!")
+        print(Fore.YELLOW + f"You Damaged {damage} to {target.name}!")
 
-    def use_active(self, slot_idx, target: Character):          # will be detatiled later
+    def use_active(self, slot_idx, target: Character):
         if slot_idx < 0 or slot_idx >= len(self.active_items):
             raise IndexError("Invalid active slot")
         item = self.active_items[slot_idx]
+        ascii_dice_roll_animation()
         roll = roll_d20()
         result = interpret_roll(roll)
+        style = style_map.get(result, Fore.CYAN)
+        print(style + f"Rolled: {roll} ({result})")
         val = 0
         if result not in ("Fumble!", "Failure") and item.effect:
             val = item.effect.apply(roll, result)
@@ -158,24 +227,26 @@ class Player(Character):
             if result in ("Success", "Critical", "Super Critical!"):
                 dur = item.status.duration + (1 if result == "Super Critical!" else 0)
                 target.add_status(type(item.status)(**{k:v for k, v in item.status.__dict__.items() if k!='duration'}, duration = dur))
+                print(Fore.RED + Style.BRIGHT + f"{target.name} is now affected by {item.status.__class__.__name__}!")
             elif result == "Fumble!":
                 self.add_status(type(item.status)(**{k:v for k, v in item.status.__dict__.items() if k!='duration'}, duration = item.status.duration))
+                print(Fore.RED + Style.BRIGHT + f"You fumbled and applied {item.status.__class__.__name__} to yourself!")
         item.uses -= 1
         if not item.targets:
             self.heal(val)
         else:
             target.take_damage(val)
-        
+
         if item.uses <= 0:
             self.active_items.pop(slot_idx)
         self.turn_action -= 1
         return roll, result, val
-    
+
     def display_battle_status(self, opponents: list[Mob]):
-        print("========= Current Situation =========")
-        names = ["YOU"] + [m.name for m in opponents]
-        hps = [f"HP:{self.hp}"] + [f"HP:{m.hp}" for m in opponents]
-        widths = [max(len(n), len(h)) for n, h in zip(names, hps)]
+        print(Fore.MAGENTA + "========= Current Situation =========")
+        names = [Fore.GREEN + "YOU"] + [Fore.RED + m.name for m in opponents]
+        hps = [f"HP:{self.hp}" for _ in [self]] + [f"HP:{m.hp}" for m in opponents]
+        widths = [max(len(n.replace(Fore.RED, '').replace(Fore.GREEN, '')), len(h)) for n, h in zip(names, hps)]
         for name, w in zip(names, widths):
             print(name.ljust(w + 2), end='')
         print()
