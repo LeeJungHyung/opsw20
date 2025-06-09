@@ -60,11 +60,11 @@ class Mob():           # type : 'normal', 'elite', 'boss'
         if result == "Failure":
             damage = 1
         if result == "Success":
-            damage == self.atk
+            damage = self.atk
         if result == "Critical":
-            damage == int(self.atk * 1.15)
+            damage = int(self.atk * 1.15)
         if result == "Super Critical!":
-            damage == int(self.atk * 1.5)
+            damage = int(self.atk * 1.5)
 
         return roll, result, damage
 
