@@ -1,3 +1,4 @@
+import enum
 from effect import *
 from dice import *
 from item import *
@@ -247,11 +248,17 @@ class Player(Character):
         names = [Fore.GREEN + "YOU"] + [Fore.RED + m.name for m in opponents]
         hps = [f"HP:{self.hp}" for _ in [self]] + [f"HP:{m.hp}" for m in opponents]
         widths = [max(len(n.replace(Fore.RED, '').replace(Fore.GREEN, '')), len(h)) for n, h in zip(names, hps)]
-        for name, w in zip(names, widths):
-            print(name.ljust(w + 2), end='')
+        for idx, name in enumerate(names):
+            if idx == 0:
+                print(name.ljust(12), end='')
+            else:
+                print(name.ljust(len(name) + 4), end='')
         print()
-        for hp, w in zip(hps, widths):
-            print(hp.ljust(w + 2), end='')
+        for idx, hp in enumerate(hps):
+            if idx == 0:
+                print(hp.ljust(12), end='')
+            else:
+                print(hp.ljust(len(hp) + 4), end='')
         print()
-        total_width = sum(widths) + 2 * len(widths)
+        total_width = 12 + sum((len(h) + 4) for h in hps[1:])
         print("=" * total_width)

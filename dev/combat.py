@@ -1,4 +1,5 @@
 import random
+import time
 from typing import List
 from player import *
 from mob import *
@@ -37,6 +38,8 @@ class CombatManager:
         self.player_log = player_log
         self.story_shown = False
         self.current_loop = 1
+        self.player.save_system = save_system
+        self.player.player_log = player_log
 
     def start_game(self):
         while True:
@@ -119,9 +122,13 @@ class CombatManager:
             if not any(m.is_alive() for m in enemies):
                 break
 
+            print("\n========= ENEMY TURN =========")
+            time.sleep(1)
             for mob in enemies:
                 if not mob.is_alive():
                     continue
+                print(f"\n --------- {mob.name}'s turn ---------")
+                time.sleep(1)
                 mob.apply_statuses()
 
                 if mob.is_stunned():
@@ -138,6 +145,10 @@ class CombatManager:
                 def_bonus = (self.player.passive.apply_defense_bonus(roll, result) if getattr(self.player, "passive", None) is not None else 0)
                 actual = max(0, damage - def_bonus)
                 self.player.take_damage(actual)
+
+                action = "used skill" if mob.skill and result not in ("Fumble!", "Failure") else "attacked"
+                print(f"{mob.name} {action} {roll}({result}) -> {actual} damage.")
+                time.sleep(1)
 
                 mob.reset_turn_state()
                 if not self.player.is_alive():
