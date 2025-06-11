@@ -39,7 +39,7 @@ class SaveSystem:
             ],
             "time_played": player_log.get("time_played", 0),
             "battle_logs": player_log.get("battle_logs", []),
-            "items_acquired": player_log.get("items_acquired", 0)
+            "items_acquired": player_log.get("i0tems_acquired", 0)
         }
         self.db.insert(record)
 
