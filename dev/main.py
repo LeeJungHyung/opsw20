@@ -18,11 +18,11 @@ title_art = r"""
 
 class GameShell(cmd2.Cmd):
     prompt = ">> "
-    intro = "Type any of the following commands:\n" \
-            "  slots\n" \
-            "  delete <slot>\n" \
-            "  start <slot>\n" \
-            "  exit\n"
+    intro = title_art + "\nType any of the following commands:\n" \
+            "1. slots\n" \
+            "2. delete <slot>\n" \
+            "3. start <slot>\n" \
+            "4. exit\n"
 
     def __init__(self):
         super().__init__()
@@ -31,12 +31,6 @@ class GameShell(cmd2.Cmd):
         self.combat_manager = None
         self.save_system = None
 
-#    def preloop(self):
-#        super().preloop()
-
-#    def postcmd(self, stop: bool, line: str) -> bool:
-#        return stop
-        
     def do_slots(self, arg):
         existing = SaveSystem.list_slots()
         if existing:
@@ -47,9 +41,10 @@ class GameShell(cmd2.Cmd):
     def do_delete(self, arg):
         try:
             slot = int(arg.strip())
-            ss = SaveSystem(slot)
-            ss.delete_slot()
+            SaveSystem(slot).delete_slot()
             self.poutput(f"Slot {slot} deleted.")
+        except ValueError:
+            self.poutput("Usage: delete <slot number 1-3>")
         except Exception as e:
             self.poutput(f"Error: {e}")
 

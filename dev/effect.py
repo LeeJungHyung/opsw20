@@ -11,9 +11,17 @@ class AttackBuffEffect(Effect):
         self.bonus = bonus
 
     def apply(self, value, category):
-        if category not in ("Fumble!", "Failure"):      # will be detailed
+        if category == "Fumble!":
+            return 0
+        if category == "Failure":
+            return 1
+        if category == "Success":
             return self.bonus
-        return 0
+        if category == "Critical":
+            return int(self.bonus * 1.1)
+        if category == "Super Critical!":
+            return int(self.bonus * 1.3)
+
 
 class DefenseBuffEffect(Effect):
     def __init__(self, name, bonus):
@@ -21,9 +29,16 @@ class DefenseBuffEffect(Effect):
         self.bonus = bonus
 
     def apply(self, value, category):
-        if category not in ("Fumble", "Failure"):       # will be detailed
+        if category == "Fumble!":
+            return 0
+        if category == "Failure":
+            return 1
+        if category == "Success":
             return self.bonus
-        return 0
+        if category == "Critical":
+            return int(self.bonus * 1.1)
+        if category == "Super Critical!":
+            return int(self.bonus * 1.3)
 
 class StatusEffect(ABC):
     def __init__(self, name, duration):

@@ -1,4 +1,5 @@
 import enum
+from typing_extensions import get_annotations
 from effect import *
 from dice import *
 from item import *
@@ -75,6 +76,14 @@ class Player(Character):
         self.active_slots = active_slots
         self.turn_action = 3
         self.log: list[str] = []
+        self.stunned = False
+        self.status_effects = []
+
+    def is_stunned(self):
+        return self.stunned
+
+    def apply_statuses(self):
+        return super().apply_statuses()
 
     def reset_action(self):
         self.turn_action = 3
@@ -103,7 +112,7 @@ class Player(Character):
 
         print(Fore.YELLOW + "Available Commands:")
         print(Fore.YELLOW + "- attack <enemy index>")
-        print(Fore.YELLOW + "- use <item index> [enemy index>")
+        print(Fore.YELLOW + "- use <item index> <enemy index>")
         print(Fore.YELLOW + "- inventory, save, quit\n")
 
         cmd = input(f"{self.name} (HP:{self.hp}, Actions:{self.turn_action}) >> ").strip().split()
@@ -149,13 +158,33 @@ class Player(Character):
 
         elif action == "inventory":
             print(Fore.CYAN + f"Weapon: {self.weapon.name} (Damage: {self.weapon.damage})")
-            print(Fore.CYAN + f"Passive: {self.passive.name if self.passive else 'None'}")
-            print(Fore.CYAN + "Active Items:")
-            if not self.active_items:
-                print(" (None)")
+            print(f"\"{self.weapon.description}\"\n")
+
+            if self.passive:
+                val = getattr(self.passive.roll_effect, 'bonus', '')
+                print(Fore.CYAN + f"Passive: {self.passive.name if self.passive else 'None'} / {val}")
+                print(f"\"{self.passive.description}\"")
             else:
-                for i, it in enumerate(self.active_items, start=1):
-                    print(f"  [{i}] {it.name} (Uses left: {it.uses})")
+                print(Fore.CYAN + "Passive: None")
+
+            print(Fore.CYAN + "Active Items:")
+            active_list = [it for it in self.active_items if isinstance(it, Acitve)]
+            for slot in range(1, self.active_slots + 1):
+                if slot <= len(active_list):
+                    item = active_list[slot - 1]
+                    val = (
+                        getattr(item.effect, 'bonus', '')
+                        or getattr(item.effect, 'damage_per_turn', '')
+                        or getattr(item.effect, 'heal_per_turn', '')
+                    )
+                    if hasattr(item, 'uses'):
+                        uses = item.uses
+                        max_uses = getattr(item, 'max_uses', uses)
+                        print(f"slot {slot}: {item.name}({uses}/{max_uses}) / {val} / \"{item.description}\"")
+                    else:
+                        print(f"slot {slot}: {item.name} / {val} / \"{item.description}\"")
+                else:
+                    print(f"slot {slot}: None")
 
         elif action == "use" and len(cmd) in (2,3):
             try:
@@ -244,21 +273,24 @@ class Player(Character):
         return roll, result, val
 
     def display_battle_status(self, opponents: list[Mob]):
-        print(Fore.MAGENTA + "========= Current Situation =========")
-        names = [Fore.GREEN + "YOU"] + [Fore.RED + m.name for m in opponents]
-        hps = [f"HP:{self.hp}" for _ in [self]] + [f"HP:{m.hp}" for m in opponents]
-        widths = [max(len(n.replace(Fore.RED, '').replace(Fore.GREEN, '')), len(h)) for n, h in zip(names, hps)]
-        for idx, name in enumerate(names):
-            if idx == 0:
-                print(name.ljust(12), end='')
-            else:
-                print(name.ljust(len(name) + 4), end='')
+        names   = [Fore.GREEN + "YOU"] + [Fore.RED + m.name for m in opponents]
+        hps     = [Fore.GREEN + f"HP:{self.hp}"] + [Fore.RED + f"HP:{m.hp}" for m in opponents]
+
+        def plain(s): return s.replace(Fore.GREEN, '').replace(Fore.RED, '').replace(Style.BRIGHT, '')
+        widths = [max(len(plain(n)), len(plain(h))) + 4 for n, h in zip(names, hps)]
+        total_width = sum(widths)
+
+        title = " Current Situation "
+        print(Fore.MAGENTA + "=" * total_width)
+        print(Fore.MAGENTA + title.center(total_width, "="))
+        print(Fore.MAGENTA + "=" * total_width)
+
+        for i, name in enumerate(names):
+            print(name.center(widths[i]), end='')
         print()
-        for idx, hp in enumerate(hps):
-            if idx == 0:
-                print(hp.ljust(12), end='')
-            else:
-                print(hp.ljust(len(hp) + 4), end='')
-        print()
-        total_width = 12 + sum((len(h) + 4) for h in hps[1:])
-        print("=" * total_width)
+
+        for i, hp in enumerate(hps):
+            print(hp.center(widths[i]), end='')
+        print(Style.RESET_ALL)
+
+        print(Fore.MAGENTA + "=" * total_width + Style.RESET_ALL)

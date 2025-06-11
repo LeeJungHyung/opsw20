@@ -1,5 +1,6 @@
 from drop_table import *
 from dice import *
+from effect import *
 
 
 class Mob():           # type : 'normal', 'elite', 'boss'
@@ -69,7 +70,16 @@ class Mob():           # type : 'normal', 'elite', 'boss'
         return roll, result, damage
 
     def use_skill(self, target):
-        pass
+        if self.skill == "Chronolock":
+            duration = 1
+            se = StunEffect(name="Chronolock Stun", duration=duration)
+            target.add_status(se)
+            print(f"{self.name} Used Chronolock! You lost your turn!")
+
+        if self.skill == "Collapse Reforged":
+            self.hp += 10
+            self.atk = int(self.atk * 1.1)
+            self.defense = int(self.defense * 1.1) 
 
     def __repr__(self):
         return f"<Mob name = {self.name}, hp = {self.hp}, atk = {self.atk}, def = {self.defense}, type = {self.mob_type}>"

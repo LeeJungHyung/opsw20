@@ -110,6 +110,10 @@ class CombatManager:
 
         while self.player.is_alive() and any(m.is_alive() for m in enemies):
             self.player.apply_statuses()
+            if self.player.is_stunned():
+                print(Fore.RED + f"{self.player.name} is stunned! Skipping your turn.\n")
+                self.player.reset_action()
+                self.player.stunned = False
             for mob in enemies:
                 mob.apply_statuses()
 

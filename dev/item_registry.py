@@ -114,7 +114,7 @@ item_registry = {
         status=None
     ),
 
-    "Stimultant": Active(
+    "Stimulant": Active(
         name="Stimultant", 
         description="You feel stronger. Avoid Overuse!",
         rarity="rare",
