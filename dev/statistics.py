@@ -46,3 +46,11 @@ def generate_statistics_report():
         report_lines.append(f"- {passive}: used in {count} slot(s)")
 
     return "\n".join(report_lines)
+
+
+def print_statistics(player_log):
+    print("\n========= Battle Statistics =========")
+    print(f"총 전투 횟수: {len(player_log.get('battle_logs', []))}")
+    print(f"획득 아이템 수: {player_log.get('items_acquired', 0)}")
+    print(f"총 입힌 데미지: {player_log.get('damage_dealt', 0)}")
+    print(f"총 받은 데미지: {player_log.get('damage_taken', 0)}")
