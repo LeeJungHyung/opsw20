@@ -73,7 +73,7 @@ def get_stage_enemies(loop, stage_number, battle_index):
         raise ValueError(f"Invalid stage number: {stage_number!r}")
 
     return enemies
-"""
+
 class Skill:
     def __init__(self, name, description, base_power):
         self.name = name
@@ -119,4 +119,14 @@ def Devourer_of_Time():
         Skill("Timeless Bite", "A physical slash imbued with temporal energy.", 24),
     ]
     return Mob("Devourer_of_Time", hp=120, attack=20, skills=skills, skill_chance=0.5, mob_type="boss")
-"""
+
+
+from mob import Mob
+
+class ChronoSprinter(Mob):
+    def __init__(self):
+        super().__init__("Chrono Sprinter", base_hp=40, base_atk=10, base_def=5)
+
+class ChronoJuggernaut(Mob):
+    def __init__(self):
+        super().__init__("Chrono Juggernaut", base_hp=80, base_atk=20, base_def=10)
